@@ -25,8 +25,10 @@ DISTDIR = .
 vpath %.tns $(DISTDIR)
 vpath %.elf $(DISTDIR)
 
-all: $(EXE).tns
+all: $(EXE).tns testos.tns
 
+testos.tns: testos.lua
+	$(LUNA) $< $@
 
 %.o: %.c
 	$(GCC) $(GCCFLAGS) -c $< -o $@
