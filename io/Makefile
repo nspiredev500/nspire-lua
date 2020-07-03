@@ -25,8 +25,10 @@ DISTDIR = .
 vpath %.tns $(DISTDIR)
 vpath %.elf $(DISTDIR)
 
-all: $(EXE).tns
+all: $(EXE).tns testio.tns
 
+testio.tns: testio.lua
+	$(LUNA) $< $@
 
 %.o: %.c
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -47,4 +49,4 @@ $(EXE).tns: $(EXE).elf
 	rm $@.zehn
 
 clean:
-	rm -f $(OBJS) $(DISTDIR)/$(EXE).tns $(DISTDIR)/$(EXE).elf $(DISTDIR)/$(EXE).zehn
+	rm -f $(OBJS) $(DISTDIR)/$(EXE).tns $(DISTDIR)/$(EXE).elf $(DISTDIR)/$(EXE).zehn testio.tns
