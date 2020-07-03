@@ -3,11 +3,14 @@
 #include <nucleus.h>
 #include <lua.h>
 #include <string.h>
-
+#include <nspireio2.h>
 
 /// for freeing resources https://www.lua.org/pil/29.html
 
 const char* lua_file_type = "ndless_io_file";
+
+
+#define LUA_STADNDARD_ERRORS 0
 
 
 
@@ -27,10 +30,14 @@ struct lua_file {
 
 int lua_file_error(lua_State *L, const char* reason,int err)
 {
-	luaL_checkstack(L,3,"not enough space on the Lua stack!");
-	lua_pushnil(L);
-	lua_pushstring(L,reason);
-	lua_pushinteger(L,err);
+	#if LUA_STADNDARD_ERRORS == 1
+		luaL_checkstack(L,3,"not enough space on the Lua stack!");
+		lua_pushnil(L);
+		lua_pushstring(L,reason);
+		lua_pushinteger(L,err);
+	#else
+		luaL_error(L,reason);
+	#endif
 	return 3;
 }
 
@@ -118,7 +125,7 @@ bool is_lua_file(lua_State *L)
 
 int lua_close_file(lua_State *L)
 {
-	//printf("closing file from lua ore running destructor\n");
+	printf("closing file from lua ore running destructor\n");
 	if (lua_gettop(L) == 0)
 	{
 		luaL_checkstack(L,2,"not enough space on the Lua stack!");
@@ -140,8 +147,9 @@ int lua_close_file(lua_State *L)
 		}
 		if (f->file != stdin && f->file != stdout && f->file != stderr && f->closed == false)
 		{
-			//printf("closing file\n");
+			printf("closing file\n");
 			f->closed = true;
+			fflush(f->file);
 			fclose(f->file);
 		}
 		return 0;
@@ -400,6 +408,11 @@ int lua_file_object_read(lua_State *L)
 	{
 		return lua_file_error(L,"file:read needs a file as first argument",-1);
 	}
+	if (lua_gettop(L) >= 3)
+	{
+		return lua_file_error(L,"too many arguments to file:read",-1);
+	}
+	luaL_checkstack(L,1,"not enough space on the Lua stack!");
 	if (is_lua_file(L))
 	{
 		struct lua_file *f = lua_touserdata(L,1);
@@ -411,14 +424,36 @@ int lua_file_object_read(lua_State *L)
 		{
 			return lua_file_error(L,"file:read: file opened for writing",-1);
 		}
+		if (feof(f->file))
+		{
+			lua_pushnil(L);
+			return 1;
+		}
 		
+		int bytes = 0;
+		if (lua_gettop(L) == 2)
+		{
+			bytes = lua_tointeger(L,2);
+		}
+		#define BUFFSIZE (1024*4)
+		if (bytes > BUFFSIZE-2)
+		{
+			bytes = BUFFSIZE-1;
+		}
+		char buffer[BUFFSIZE];
+		memset(buffer,'\0',BUFFSIZE);
+		size_t read_bytes = fread(buffer,1,bytes,f->file);
+		uart_printf("read: %s, bytes %d",buffer,read_bytes);
+		lua_pushlstring(L,buffer,read_bytes);
+		return 1;
 	}
 	return lua_file_error(L,"file:read needs a file as first argument",-1);
 }
 int lua_file_object_write(lua_State *L)
 {
-	//uart_printf("file:write arguments: %d\n",lua_gettop(L));
-	//uart_printf("udata: %p\n",luaL_checkudata(L,1,lua_file_type));
+	uart_printf("file:write arguments: %d\n",lua_gettop(L));
+	uart_printf("udata: %p\n",luaL_checkudata(L,1,lua_file_type));
+	//fflush(stdout);
 	if (lua_gettop(L) == 0)
 	{
 		return lua_file_error(L,"file:write needs a file as first argument, but no arguments are passed",-1);
@@ -441,7 +476,14 @@ int lua_file_object_write(lua_State *L)
 			{
 				return lua_file_error(L,"file:write needs arguments that are convertible to strings",-1);
 			}
+			uart_printf("writing: %s",str);
 			fwrite(str,1,strlen(str),f->file);
+			fflush(f->file);
+			if (f->file == stdout)
+			{
+				//uart_printf("%s",str);
+				fflush(stdout);
+			}
 		}
 		return 0;
 	}
