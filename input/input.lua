@@ -19,7 +19,10 @@
 	"btab" (backtab, shift+tab)
 	"clear" (ctrl+del)
 	"help" (ctrl+trig)
-	
+	"up"
+	"down"
+	"left"
+	"right"
 	
 	And the strings from the special Nspire keys:
 	"^2" (x^2 key)
@@ -117,8 +120,21 @@ function on.help()
 	on.input("help",false,false,false,false,string.len("help"))
 end
 
+function on.arrowUp()
+	on.input("up",false,false,false,false,string.len("up"))
+end
 
+function on.arrowDown()
+	on.input("down",false,false,false,false,string.len("down"))
+end
 
+function on.arrowLeft()
+	on.input("left",false,false,false,false,string.len("left"))
+end
+
+function on.arrowRight()
+	on.input("right",false,false,false,false,string.len("right"))
+end
 
 
 ---  end lua input library  ---
