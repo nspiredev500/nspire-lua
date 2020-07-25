@@ -3,9 +3,8 @@
 
 
 
-
-
 function on.construction()
+	window.window(0.2,0.2,0.5,0.5,true,"test").decoration:setColor(200,255,200)
 	
 	
 	
@@ -14,17 +13,6 @@ function on.construction()
 end
 
 
-
-
-
-function on.paint(gc)
-	gc:setColorRGB(255,255,255)
-	--gc:fillRect(0,0,320,240)
-	
-	
-	
-	
-end
 
 
 

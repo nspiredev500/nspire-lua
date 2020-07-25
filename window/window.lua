@@ -1,124 +1,302 @@
----  TI-Lua input library by nspiredev500  ---
+---  TI-Lua window manager library by nspiredev500  ---
 --[[
-	You have to supply a on.input function.
-	The first argument is a input string. It's either the char of the pressed key or one of the special key strings.
-	The second arguments is a whether it is a digit.
-	The third argument is whether it is a alphabetic character.
-	The fourth argument is whether it is a punctuation character ('.', ',', '!',...)
-	The fifth argument is whether the character is a whitespace
-	The sixth argument is the string length.
-	
-	The special key strings are:
-	"enter"
-	"esc"
-	"del" (delete key, only available in the computer software)
-	"tab"
-	"bsp" (backspace, del)
-	"ret" (return, the little arrow on the bottom-right)
-	"cont" (context menu, ctrl+menu)
-	"btab" (backtab, shift+tab)
-	"clear" (ctrl+del)
-	"help" (ctrl+trig)
+	This is a window manager library.
+	It requires my input library.
 	
 	
-	And the strings from the special Nspire keys:
-	"^2" (x^2 key)
-	"√(" (ctrl + x^2 key)
-	"root(" (ctrl + ^ key)
-	"exp(" (e^x key)
-	"ln(" (ctrl + e^x key)
-	"10^("
-	"log(" (ctrl + 10^x key)
-	string.char(239)..string.char(128)..string.char(128) (EE key)
-	"\" (shift + division)
-	string.char(226)..string.char(136)..string.char(171).."(" (shift + plus)
-	string.char(239)..string.char(128)..string.char(136).."(" (shift + minus)
-	string.char(226)..string.char(136)..string.char(246) (the sign minus)
-	"_" (ctrl + space)
 	
 	
-	The input table contains definitions for some of the hard-to-write ones.
 	
 	
 ]]--
 
-input = {
-sq="^2",
-sqrt="√(",
-root="root(",
-exp="exp(",
-ln="ln(",
-pow10="10^(",
-log="log(",
-ee=string.char(239)..string.char(128)..string.char(128),
-int=string.char(226)..string.char(136)..string.char(171).."(",
-deriv=string.char(239)..string.char(128)..string.char(136).."(",
-mathmin=string.char(226)..string.char(136)..string.char(146)
-}
+
+window = {}
+window.window = class()
+window.decoration = class()
+window.bare = class(decoration)
+window._initialized = false
+window._w = 0
+window._h = 0
+window._windows = {}
+window._moving = nil
+window._grabx = 0
+window._graby = 0
 
 
+function window.window:init(relx,rely,width,height,visible,name,decoration)
+	assert(tonumber(width),"window: width has to be a number")
+	assert(tonumber(height),"window: height has to be a number")
+	assert(tonumber(relx),"window: relx has to be a number")
+	assert(tonumber(rely),"window: rely has to be a number")
+	self.width = width
+	self.height = height
+	self.relx = relx
+	self.rely = rely
+	if visible then
+		self.visible = true
+	else
+		self.visible = false
+	end
+	if name ~= nil then
+		if tostring(name) == nil then
+			error("window: name has to be a string")
+		end
+		self.name = tostring(name)
+	end
+	if decoration == nil then
+		self.decoration = window.decoration(0.1,0.008,0.008,0.008)
+	else
+		self.decoration = decoration
+	end
+	table.insert(window._windows,self)
+end
 
-function on.charIn(c)
-	local len = c:len()
-	if len == 1 then
-		if string.match(c,"%d") ~= nil then
-			on.input(c,true,false,false,false,len)
-		end
-		if string.match(c,"%a") ~= nil then
-			on.input(c,false,true,false,false,len)
-		end
-		if string.match(c,"%p") ~= nil then
-			on.input(c,false,false,true,false,len)
-		end
-		if string.match(c,"%s") ~= nil then
-			on.input(c,false,false,false,true,len)
+function window.window:visible()
+	return self.visible
+end
+
+function window.window:setVisible(visible)
+	if visible then
+		self.visible = true
+	else
+		self.visible = false
+	end
+end
+
+function window.window:size()
+	return self.size
+end
+
+function window.window:position()
+	return self.relx, self.rely
+end
+
+function window.window:setPosition(relx,rely)
+	assert(tonumber(relx),"window: relx has to be a number")
+	assert(tonumber(rely),"window: rely has to be a number")
+	self.relx = relx
+	self.rely = rely
+end
+
+function window.window:setSize(width,height)
+	assert(tonumber(width),"window: width has to be a number")
+	assert(tonumber(height),"window: height has to be a number")
+	self.width = width
+	self.height = height
+end
+
+function window.window:destroy()
+	if window._moving == self then
+		window._moving = nil
+	end
+	for i,j in ipairs(window._windows) do
+		if j == self then
+			table.remove(window._windows,i)
+			return
 		end
 	end
-	on.input(c,false,false,false,false,len)
-end
-
-function on.enterKey()
-	on.input("enter",false,false,false,false,string.len("enter"))
-end
-
-function on.escapeKey()
-	on.input("esc",false,false,false,false,string.len("esc"))
-end
-
-function on.tabKey()
-	on.input("tab",false,false,false,false,string.len("tab"))
-end
-
-function on.deleteKey()
-	on.input("del",false,false,false,false,string.len("del"))
-end
-
-function on.backspaceKey()
-	on.input("bsp",false,false,false,false,string.len("bsp"))
-end
-
-function on.returnKey()
-	on.input("ret",false,false,false,false,string.len("ret"))
-end
-
-function on.contextMenu()
-	on.input("cont",false,false,false,false,string.len("cont"))
-end
-
-function on.backtabKey()
-	on.input("btab",false,false,false,false,string.len("btab"))
-end
-
-function on.clearKey()
-	on.input("clear",false,false,false,false,string.len("clear"))
-end
-
-function on.help()
-	on.input("help",false,false,false,false,string.len("help"))
 end
 
 
 
 
 
----  end lua input library  ---
+function window.decoration:init(top,bottom,left,right,r,g,b)
+	assert(tonumber(top),"window: top has to be a number")
+	assert(tonumber(bottom),"window: bottom has to be a number")
+	assert(tonumber(left),"window: left has to be a number")
+	assert(tonumber(right),"window: right has to be a number")
+	self.top = top
+	self.bottom = bottom
+	self.left = left
+	self.right = right
+	if tonumber(r) == nil then
+		self.r = 255
+	else
+		self.r = r
+	end
+	if tonumber(g) == nil then
+		self.g = 255
+	else
+		self.g = g
+	end
+	if tonumber(b) == nil then
+		self.b = 255
+	else
+		self.b = b
+	end
+end
+
+function window.decoration:paint(gc,w)
+	gc:setColorRGB(0,0,0)
+	local absx = w.relx * window._w
+	local absy = w.rely * window._h
+	local absw = w.width * window._w
+	local absh = w.height * window._h
+	local left = self.left * window._w
+	local right = self.right * window._w
+	local top = self.top * window._h
+	local bottom = self.bottom * window._h
+	gc:fillRect(absx-left,absy-top,left,absh+bottom+top)
+	gc:fillRect(absx+absw,absy-top,right,absh+bottom+top)
+	
+	gc:fillRect(absx-left,absy+absh,absw+right,bottom)
+	gc:drawRect(absx-left,absy-top,absw+right,top)
+	gc:setColorRGB(self.r,self.g,self.b)
+	gc:fillRect(absx,absy-top+1,absw,top-1)
+	
+	gc:setColorRGB(0,0,0)
+	gc:drawString(w.name,absx+1,absy-top,"top")
+end
+
+function window.decoration:setColor(r,g,b)
+	if tonumber(r) == nil then
+		self.r = 255
+	else
+		self.r = r
+	end
+	if tonumber(g) == nil then
+		self.g = 255
+	else
+		self.g = g
+	end
+	if tonumber(b) == nil then
+		self.b = 255
+	else
+		self.b = b
+	end
+end
+
+function window.bare:init()
+	window.decoration.init(self,1,5,1,1)
+end
+
+function window.bare:paint(gc)
+	gc:setColorRGB(0,0,0)
+	local absx = w.relx * window._w
+	local absy = w.rely * window._h
+	local absw = w.width * window._w
+	local absh = w.height * window._h
+	local left = self.left * window._w
+	local right = self.right * window._w
+	local top = self.top * window._h
+	local bottom = self.bottom * window._h
+	gc:fillRect(absx-left,absy-top,left,absh+bottom+top)
+	gc:fillRect(absx+absw,absy-top,right,absh+bottom+top)
+	
+	gc:fillRect(absx-left,absy+absh,absw+right,bottom)
+	gc:drawRect(absx-left,absy-top,absw+right,top)
+end
+
+function on.grabDown(x,y)
+	for i,w in ipairs(window._windows) do
+		local self = w.decoration
+		local absx = w.relx * window._w
+		local absy = w.rely * window._h
+		local absw = w.width * window._w
+		local absh = w.height * window._h
+		local left = self.left * window._w
+		local right = self.right * window._w
+		local top = self.top * window._h
+		if x > absx-left and x < absx+absw+right and y > absy-top and y < absy+top then
+			cursor.set("drag grab")
+			return
+		end
+	end
+end
+
+function on.grabUp(x,y)
+	if window._moving ~= nil then
+		local w = window._moving
+		local self = w.decoration
+		local absx = w.relx * window._w
+		local absy = w.rely * window._h
+		local absw = w.width * window._w
+		local absh = w.height * window._h
+		local left = self.left * window._w
+		local right = self.right * window._w
+		local top = self.top * window._h
+		if absx-left < 0 then
+			w.relx = self.left
+		end
+		if absy-top < 0 then
+			w.rely = self.top
+		end
+		window._moving = nil
+		cursor.set("default")
+		platform.window:invalidate()
+		return
+	end
+	for i,w in ipairs(window._windows) do
+		local self = w.decoration
+		local absx = w.relx * window._w
+		local absy = w.rely * window._h
+		local absw = w.width * window._w
+		local absh = w.height * window._h
+		local left = self.left * window._w
+		local right = self.right * window._w
+		local top = self.top * window._h
+		if x > absx-left and x < absx+absw+right and y > absy-top and y < absy+top then
+			window._moving = w
+			window._grabx = x - (absx)
+			window._graby = y - (absy)
+			cursor.set("drag grab")
+			return
+		end
+	end
+end
+
+
+function on.mouseDown(x,y)
+	
+end
+
+function on.mouseUp(x,y)
+	
+end
+
+function on.mouseMove(x,y)
+	if window._moving ~= nil then
+		window._moving.relx = (x - window._grabx) / window._w
+		window._moving.rely = (y - window._graby) / window._h
+		platform.window:invalidate()
+	end
+end
+
+
+function on.input()
+	
+	
+	
+	
+	platform.window:invalidate()
+end
+
+
+function on.paint(gc)
+	if window._initialized == false then
+		window._w = platform.window:width()
+		window._h = platform.window:height()
+		window._initialized = true
+	end
+	gc:setColorRGB(255,255,255)
+	gc:fillRect(0,0,window._w,window._h)
+	for i,w in ipairs(window._windows) do
+		w.decoration:paint(gc,w)
+	end
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+---  end window manager library  ---
