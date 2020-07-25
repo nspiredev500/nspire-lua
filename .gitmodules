@@ -1,0 +1,3 @@
+[submodule "nspire-toolchain"]
+	path = nspire-toolchain
+	url = https://github.com/nspiredev500/nspire-toolchain.git
