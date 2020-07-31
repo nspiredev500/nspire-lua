@@ -14,6 +14,10 @@
 window = {}
 window.window = class()
 window.decoration = class()
+window.button = class()
+window.label = class()
+window.textField = class()
+window.textEditor = class()
 window.bare = class(decoration)
 window._initialized = false
 window._w = 0
@@ -23,16 +27,98 @@ window._moving = nil
 window._grabx = 0
 window._graby = 0
 
-
-function window.window:init(relx,rely,width,height,visible,name,decoration)
+function window._setVisible(self,vis)
+	self.visible = vis
+end
+function window._recomputeSize(self,gc)
+	self.width = gc:getStringWidth(self.text)
+	self.height = gc:getStringHeight(self.text)
+end
+function window.button:init(x,y,text,onPress)
+	assert(tonumber(x),"window: x has to be a number")
+	assert(tonumber(y),"window: y has to be a number")
+	self.visible = true
+	self.x = x
+	self.y = y
+	self.text = text
+	self.onPress = onPress
+	platform.withGC(window._recomputeSize,self)
+end
+window.button.setVisible = window._setVisible
+function window.button:paint(w,gc)
+	gc:setColorRGB(0,0,0)
+	gc:drawRect(w.x+self.x,w.y+self.y,self.width,self.height)
+	gc:drawString(self.text,w.x+self.x,w.y+self.y,"top")
+end
+function window.button:event(e,d,a,p,w,l,m,x,y)
+	if e == "mouseup" then
+		self.onPress()
+	end
+end
+function window.label:init(x,y,text)
+	assert(tonumber(x),"window: x has to be a number")
+	assert(tonumber(y),"window: y has to be a number")
+	self.visible = true
+	self.x = x
+	self.y = y
+	if text == nil then
+		self.text = ""
+	else
+		self.text = tostring(x,y,text)
+	end
+	platform.withGC(window._recomputeSize,self)
+end
+function window.label:paint(w,gc)
+	gc:setColorRGB(0,0,0)
+	gc:drawString(self.text,w.x+self.x,w.y+self.y,"top")
+end
+function window.label:event(e,d,a,p,w,l,m,x,y)
+end
+function window.textField:init(x,y,text,width,height)
+	assert(tonumber(x),"window: x has to be a number")
+	assert(tonumber(y),"window: y has to be a number")
 	assert(tonumber(width),"window: width has to be a number")
 	assert(tonumber(height),"window: height has to be a number")
-	assert(tonumber(relx),"window: relx has to be a number")
-	assert(tonumber(rely),"window: rely has to be a number")
+	self.visible = true
+	self.x = x
+	self.y = y
 	self.width = width
 	self.height = height
-	self.relx = relx
-	self.rely = rely
+	if text == nil then
+		self.text = ""
+	else
+		self.text = tostring(text)
+	end
+end
+function window.textEditor:init(x,y,text,width,height)
+	assert(tonumber(x),"window: x has to be a number")
+	assert(tonumber(y),"window: y has to be a number")
+	assert(tonumber(width),"window: width has to be a number")
+	assert(tonumber(height),"window: height has to be a number")
+	self.visible = true
+	self.width = width
+	self.height = height
+	self.x = x
+	self.y = y
+	if text == nil then
+		self.text = ""
+	else
+		self.text = tostring(text)
+	end
+end
+
+
+function window.window:init(x,y,width,height,visible,name,decoration)
+	assert(tonumber(width),"window: width has to be a number")
+	assert(tonumber(height),"window: height has to be a number")
+	assert(tonumber(x),"window: x has to be a number")
+	assert(tonumber(y),"window: y has to be a number")
+	self.components = {}
+	self.width = width
+	self.height = height
+	self.x = x
+	self.y = y
+	self.fullscreen = false
 	if visible then
 		self.visible = true
 	else
@@ -45,13 +131,17 @@ function window.window:init(relx,rely,width,height,visible,name,decoration)
 		self.name = tostring(name)
 	end
 	if decoration == nil then
-		self.decoration = window.decoration(0.1,0.008,0.008,0.008)
+		self.decoration = window.decoration(20,1,1,1)
 	else
 		self.decoration = decoration
 	end
 	table.insert(window._windows,self)
+	window._focused = self
 end
 
+function window.window:add(c)
+	table.insert(self.components,c)
+end
 function window.window:visible()
 	return self.visible
 end
@@ -72,11 +162,21 @@ function window.window:position()
 	return self.relx, self.rely
 end
 
-function window.window:setPosition(relx,rely)
-	assert(tonumber(relx),"window: relx has to be a number")
-	assert(tonumber(rely),"window: rely has to be a number")
-	self.relx = relx
-	self.rely = rely
+function window.window:setFullscreen(full)
+	self.fullscreen = full
+	if full == true then
+		self.x = 0
+		self.y = 0
+		self.width = window._w
+		self.h = window._h
+	end
+end
+
+function window.window:setPosition(x,r)
+	assert(tonumber(x),"window: x has to be a number")
+	assert(tonumber(y),"window: y has to be a number")
+	self.x = x
+	self.y = y
 end
 
 function window.window:setSize(width,height)
@@ -90,6 +190,9 @@ function window.window:destroy()
 	if window._moving == self then
 		window._moving = nil
 	end
+	if window._focused == self then
+		window._focused = nil
+	end
 	for i,j in ipairs(window._windows) do
 		if j == self then
 			table.remove(window._windows,i)
@@ -98,8 +201,30 @@ function window.window:destroy()
 	end
 end
 
+function window.window:paint(gc)
+	gc:setColorRGB(255,255,255)
+	gc:fillRect(self.x,self.y,self.width,self.height)
+	for i,j in ipairs(self.components) do
+		if j.visible == true then
+			j:paint(self,gc)
+		end
+	end
+end
 
-
+function window.window:event(e,d,a,p,w,l,m,x,y)
+	if m == true then
+		for i,j in ipairs(self.components) do
+			if x >= self.x+j.x and x <= self.x+j.x+j.width and y >= self.y+j.y and y <= self.y+j.y+j.height then
+				j:event(e,d,a,p,w,l,m,x-self.x,y-self.y)
+				return
+			end
+		end
+	else
+		if self.focused ~= nil then
+			self.focused:event(e,d,a,p,w,l,m,x,y)
+		end
+	end
+end
 
 
 function window.decoration:init(top,bottom,left,right,r,g,b)
@@ -130,24 +255,17 @@ end
 
 function window.decoration:paint(gc,w)
 	gc:setColorRGB(0,0,0)
-	local absx = w.relx * window._w
-	local absy = w.rely * window._h
-	local absw = w.width * window._w
-	local absh = w.height * window._h
-	local left = self.left * window._w
-	local right = self.right * window._w
-	local top = self.top * window._h
-	local bottom = self.bottom * window._h
-	gc:fillRect(absx-left,absy-top,left,absh+bottom+top)
-	gc:fillRect(absx+absw,absy-top,right,absh+bottom+top)
+	gc:fillRect(w.x-self.left,w.y-self.top,self.left,w.height+self.top+self.bottom)
+	gc:fillRect(w.x+w.width,w.y-self.top,self.right,w.height+self.top+self.bottom)
 	
-	gc:fillRect(absx-left,absy+absh,absw+right,bottom)
-	gc:drawRect(absx-left,absy-top,absw+right,top)
+	gc:fillRect(w.x-self.left,w.y+w.height,w.width+self.left+self.right,self.bottom)
+	gc:drawRect(w.x-self.left,w.y-self.top,w.width+self.left,self.top-1)
+	
 	gc:setColorRGB(self.r,self.g,self.b)
-	gc:fillRect(absx,absy-top+1,absw,top-1)
+	gc:fillRect(w.x,w.y-self.top+1,w.width,self.top-2)
 	
 	gc:setColorRGB(0,0,0)
-	gc:drawString(w.name,absx+1,absy-top,"top")
+	gc:drawString(w.name,w.x,w.y-self.top,"top")
 end
 
 function window.decoration:setColor(r,g,b)
@@ -173,75 +291,42 @@ function window.bare:init()
 end
 
 function window.bare:paint(gc)
-	gc:setColorRGB(0,0,0)
-	local absx = w.relx * window._w
-	local absy = w.rely * window._h
-	local absw = w.width * window._w
-	local absh = w.height * window._h
-	local left = self.left * window._w
-	local right = self.right * window._w
-	local top = self.top * window._h
-	local bottom = self.bottom * window._h
-	gc:fillRect(absx-left,absy-top,left,absh+bottom+top)
-	gc:fillRect(absx+absw,absy-top,right,absh+bottom+top)
 	
-	gc:fillRect(absx-left,absy+absh,absw+right,bottom)
-	gc:drawRect(absx-left,absy-top,absw+right,top)
+	
+	
+	
 end
 
 function on.grabDown(x,y)
-	for i,w in ipairs(window._windows) do
-		local self = w.decoration
-		local absx = w.relx * window._w
-		local absy = w.rely * window._h
-		local absw = w.width * window._w
-		local absh = w.height * window._h
-		local left = self.left * window._w
-		local right = self.right * window._w
-		local top = self.top * window._h
-		if x > absx-left and x < absx+absw+right and y > absy-top and y < absy+top then
-			cursor.set("drag grab")
-			return
-		end
-	end
+	
 end
 
 function on.grabUp(x,y)
 	if window._moving ~= nil then
 		local w = window._moving
 		local self = w.decoration
-		local absx = w.relx * window._w
-		local absy = w.rely * window._h
-		local absw = w.width * window._w
-		local absh = w.height * window._h
-		local left = self.left * window._w
-		local right = self.right * window._w
-		local top = self.top * window._h
-		if absx-left < 0 then
-			w.relx = self.left
+		if w.x-self.left < 0 then
+			w.x = self.left
 		end
-		if absy-top < 0 then
-			w.rely = self.top
+		if w.y-self.top < 0 then
+			w.y = self.top
 		end
 		window._moving = nil
 		cursor.set("default")
 		platform.window:invalidate()
 		return
 	end
-	for i,w in ipairs(window._windows) do
+	for i = #window._windows, 1, -1 do
+		local w = window._windows[i]
 		local self = w.decoration
-		local absx = w.relx * window._w
-		local absy = w.rely * window._h
-		local absw = w.width * window._w
-		local absh = w.height * window._h
-		local left = self.left * window._w
-		local right = self.right * window._w
-		local top = self.top * window._h
-		if x > absx-left and x < absx+absw+right and y > absy-top and y < absy+top then
+		if x > w.x-self.left and x < w.x+w.width+self.right and y > w.y-self.top and y < w.y then
 			window._moving = w
-			window._grabx = x - (absx)
-			window._graby = y - (absy)
+			window._grabx = x - w.x
+			window._graby = y - w.y
+			table.remove(window._windows,i)
+			table.insert(window._windows,w)
 			cursor.set("drag grab")
+			platform.window:invalidate()
 			return
 		end
 	end
@@ -253,24 +338,32 @@ function on.mouseDown(x,y)
 end
 
 function on.mouseUp(x,y)
-	
+	for i = #window._windows, 1, -1 do
+		local w = window._windows[i]
+		if x >= w.x and x <= w.x+w.width and y >= w.y and y <= w.y+w.height then
+			window._focused = w
+			w:event("mouseup",false,false,false,false,string.len("mouseup"),true,x,y)
+			platform.window:invalidate()
+			return
+		end
+	end
+	window._focused = nil
 end
 
 function on.mouseMove(x,y)
 	if window._moving ~= nil then
-		window._moving.relx = (x - window._grabx) / window._w
-		window._moving.rely = (y - window._graby) / window._h
+		window._moving.x = x - window._grabx
+		window._moving.y = y - window._graby
 		platform.window:invalidate()
 	end
 end
 
 
-function on.input()
-	
-	
-	
-	
-	platform.window:invalidate()
+function on.input(e,d,a,p,w,l)
+	if window._focused ~= nil then
+		window._focused:event(e,d,a,p,w,l,false,0,0)
+		platform.window:invalidate()
+	end
 end
 
 
@@ -283,7 +376,10 @@ function on.paint(gc)
 	gc:setColorRGB(255,255,255)
 	gc:fillRect(0,0,window._w,window._h)
 	for i,w in ipairs(window._windows) do
-		w.decoration:paint(gc,w)
+		if not w.fullscreen == true then
+			w.decoration:paint(gc,w)
+		end
+		w:paint(gc)
 	end
 end
 
