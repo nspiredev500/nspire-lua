@@ -66,15 +66,19 @@ function on.charIn(c)
 	if len == 1 then
 		if string.match(c,"%d") ~= nil then
 			on.input(c,true,false,false,false,len)
+			return
 		end
 		if string.match(c,"%a") ~= nil then
 			on.input(c,false,true,false,false,len)
+			return
 		end
 		if string.match(c,"%p") ~= nil then
 			on.input(c,false,false,true,false,len)
+			return
 		end
 		if string.match(c,"%s") ~= nil then
 			on.input(c,false,false,false,true,len)
+			return
 		end
 	end
 	on.input(c,false,false,false,false,len)
