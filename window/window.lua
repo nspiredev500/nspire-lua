@@ -35,6 +35,13 @@ function window._recomputeSize(self,gc)
 	self.width = gc:getStringWidth(self.text)
 	self.height = gc:getStringHeight(self.text)
 end
+function window._recomputeSizeFont(self,gc)
+	local ff,ft,fs = gc:setFont(self.ff,self.ftype,self.fsize)
+	self.width = gc:getStringWidth(self.text)
+	self.height = gc:getStringHeight(self.text)
+	gc:setFont(ff,ft,fs)
+end
+
 function window.button:init(x,y,text,onPress)
 	assert(tonumber(x),"window: x has to be a number")
 	assert(tonumber(y),"window: y has to be a number")
@@ -43,13 +50,25 @@ function window.button:init(x,y,text,onPress)
 	self.y = y
 	self.text = text
 	self.onPress = onPress
+	self.ff = "sansserif"
+	self.ftype = "r"
+	self.fsize = 11
 	platform.withGC(window._recomputeSize,self)
+end
+function window.button:setFont(ff,ft,size,win)
+	self.ff = ff
+	self.ftype = ft
+	self.fsize = size
+	platform.withGC(window._recomputeSizeFont,self)
+	window._damage(win.x+self.x,win.y+self.y,self.width,self.height)
 end
 window.button.setVisible = window._setVisible
 function window.button:paint(w,gc)
+	local ff,ft,fs = gc:setFont(self.ff,self.ftype,self.fsize)
 	gc:setColorRGB(0,0,0)
 	gc:drawRect(w.x+self.x,w.y+self.y,self.width,self.height)
 	gc:drawString(self.text,w.x+self.x,w.y+self.y,"top")
+	gc:setFont(ff,ft,fs)
 end
 function window.button:event(e,d,a,p,w,l,m,x,y,win)
 	if e == "mouseup" then
@@ -62,6 +81,9 @@ function window.label:init(x,y,text)
 	self.visible = true
 	self.x = x
 	self.y = y
+	self.ff = "sansserif"
+	self.ftype = "r"
+	self.fsize = 11
 	if text == nil then
 		self.text = ""
 	else
@@ -70,10 +92,19 @@ function window.label:init(x,y,text)
 	platform.withGC(window._recomputeSize,self)
 end
 function window.label:paint(w,gc)
+	local ff,ft,fs = gc:setFont(self.ff,self.ftype,self.fsize)
 	gc:setColorRGB(0,0,0)
 	gc:drawString(self.text,w.x+self.x,w.y+self.y,"top")
+	gc:setFont(ff,ft,fs)
 end
 function window.label:event(e,d,a,p,w,l,m,x,y,win)
+end
+function window.label:setFont(ff,ft,size,win)
+	self.ff = ff
+	self.ftype = ft
+	self.fsize = size
+	platform.withGC(window._recomputeSizeFont,self)
+	window._damage(win.x+self.x,win.y+self.y,self.width,self.height)
 end
 function window.textField:init(x,y,text,width,height)
 	assert(tonumber(x),"window: x has to be a number")
@@ -87,6 +118,9 @@ function window.textField:init(x,y,text,width,height)
 	self.height = height
 	self.cursor = 0
 	self.scroll = 0
+	self.ff = "sansserif"
+	self.ftype = "r"
+	self.fsize = 11
 	if text == nil then
 		self.text = ""
 	else
@@ -94,6 +128,7 @@ function window.textField:init(x,y,text,width,height)
 	end
 end
 function window.textField:paint(w,gc)
+	local ff,ft,fs = gc:setFont(self.ff,self.ftype,self.fsize)
 	gc:setColorRGB(0,0,0)
 	gc:drawRect(w.x+self.x,w.y+self.y,self.width,self.height)
 	gc:clipRect("set",w.x+self.x,w.y+self.y,self.width,self.height)
@@ -101,8 +136,10 @@ function window.textField:paint(w,gc)
 	local scr = gc:getStringWidth(self.text:sub(1,self.cursor))
 	gc:fillRect(w.x+self.x+scr+2+self.scroll,w.y+self.y+2,1,self.height-4)
 	gc:clipRect("reset")
+	gc:setFont(ff,ft,fs)
 end
 function window.textField._adjustScroll(self,gc)
+	local ff,ft,fs = gc:setFont(self.ff,self.ftype,self.fsize)
 	local w = gc:getStringWidth(self.text:sub(1,self.cursor)) + self.scroll + 3
 	if w > self.width then
 		self.scroll = self.scroll - (w - self.width) - 1
@@ -110,6 +147,7 @@ function window.textField._adjustScroll(self,gc)
 	if w - gc:getStringWidth(self.text:sub(self.cursor,self.cursor)) < 2 then
 		self.scroll = self.scroll - w + gc:getStringWidth(self.text:sub(self.cursor,self.cursor)) + 3
 	end
+	gc:setFont(ff,ft,fs)
 end
 function window.textField:event(e,d,a,p,w,l,m,x,y,win)
 	if l == 1 then
@@ -142,6 +180,15 @@ function window.textField:event(e,d,a,p,w,l,m,x,y,win)
 	end
 	platform.withGC(window.textField._adjustScroll,self)
 end
+function window.textField:getText()
+	return self.text
+end
+function window.textField:setFont(ff,ft,size,win)
+	self.ff = ff
+	self.ftype = ft
+	self.fsize = size
+	window._damage(win.x+self.x,win.y+self.y,self.width,self.height)
+end
 function window.textEditor:init(x,y,text,width,height)
 	assert(tonumber(x),"window: x has to be a number")
 	assert(tonumber(y),"window: y has to be a number")
@@ -152,6 +199,9 @@ function window.textEditor:init(x,y,text,width,height)
 	self.height = height
 	self.x = x
 	self.y = y
+	self.ff = "sansserif"
+	self.ftype = "r"
+	self.fsize = 11
 	self.cursor = 0
 	self.scroll = 0
 	self.scrollline = 0
@@ -164,6 +214,7 @@ function window.textEditor:init(x,y,text,width,height)
 	end
 end
 function window.textEditor:paint(w,gc)
+	local ff,ft,fs = gc:setFont(self.ff,self.ftype,self.fsize)
 	gc:setColorRGB(0,0,0)
 	gc:drawRect(w.x+self.x,w.y+self.y,self.width,self.height)
 	gc:clipRect("set",w.x+self.x,w.y+self.y,self.width,self.height)
@@ -181,8 +232,10 @@ function window.textEditor:paint(w,gc)
 	local scr = gc:getStringWidth(self.text[self.line]:sub(1,self.cursor))
 	gc:fillRect(w.x+self.x+scr+2+self.scroll,w.y+self.y+lineh+2,1,gc:getStringHeight(self.text[self.line])-4)
 	gc:clipRect("reset")
+	gc:setFont(ff,ft,fs)
 end
 function window.textEditor._adjustScroll(self,gc)
+	local ff,ft,fs = gc:setFont(self.ff,self.ftype,self.fsize)
 	local w = gc:getStringWidth(self.text[self.line]:sub(1,self.cursor)) + self.scroll + 3
 	if w > self.width then
 		self.scroll = self.scroll - (w - self.width) - 1
@@ -212,11 +265,13 @@ function window.textEditor._adjustScroll(self,gc)
 				lines = lines + 1
 				if h >= lineh + gc:getStringWidth(self.text[self.line]) - self.height then
 					self.scrollline = self.scrollline + lines
+					gc:setFont(ff,ft,fs)
 					return
 				end
 			end
 		end
 	end
+	gc:setFont(ff,ft,fs)
 end
 function window.textEditor:event(e,d,a,p,w,l,m,x,y,win)
 	if l == 1 then
@@ -285,6 +340,24 @@ function window.textEditor:event(e,d,a,p,w,l,m,x,y,win)
 	end
 	platform.withGC(window.textEditor._adjustScroll,self)
 end
+function window.textEditor:getText()
+	local t = ""
+	for i, j in ipairs(self.text) do
+		t = t .. j
+	end
+	return t
+end
+function window.textEditor:getLine(l)
+	return self.text[l]
+end
+function window.textEditor:setFont(ff,ft,size,win)
+	self.ff = ff
+	self.ftype = ft
+	self.fsize = size
+	window._damage(win.x+self.x,win.y+self.y,self.width,self.height)
+end
+
+
 
 function window.window:init(x,y,width,height,visible,name,decoration)
 	assert(tonumber(width),"window: width has to be a number")
