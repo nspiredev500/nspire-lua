@@ -1,6 +1,8 @@
-If you already know a bit about programming and the arm architecture, you can skip this and look at the included examples.
 In the assembler (page 2) you can write your programs. Use menu to save and load programs, help for the options, ctrl+^ for seeing the registers after a program executed, ctrl+x^2 to see the stack, esc to quit out of windows.
 Page 3 is a instruction searcher. You can enter a instruction, and get a description. Press enter do search a description and press help to get back to entering an instruction.
+Page 4 is a simple instruction list.
+If you already know a bit about programming and the arm architecture, you can skip this and look at the included examples.
+
 
 The TI-Nspire uses an ARM processor.
 Arm processors cannot directly access memory.
