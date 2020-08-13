@@ -187,17 +187,18 @@ function on.construction()
 	asm_error_window:registerFilter(dialog_filter)
 	asm_error_window:focus(asm_error_label)
 	
-	if ndless == false then
-		no_ndless_dialog:setVisible(true)
-	else
-		if as_lib_loaded == false then
-			no_asm_lib_dialog:setVisible(true)
-		end
-	end
-	
 	window.focus(main_window)
 	main_window:focus(editor)
 	
+	if ndless == false then
+		no_ndless_dialog:setVisible(true)
+		window.focus(no_ndless_dialog)
+	else
+		if as_lib_loaded == false then
+			no_asm_lib_dialog:setVisible(true)
+			window.focus(no_asm_lib_dialog)
+		end
+	end
 	
 	window._damage(0,0,320,240)
 	platform.window:invalidate()

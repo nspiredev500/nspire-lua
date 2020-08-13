@@ -187,17 +187,18 @@ function on.construction()
 	asm_error_window:registerFilter(dialog_filter)
 	asm_error_window:focus(asm_error_label)
 	
-	if ndless == false then
-		no_ndless_dialog:setVisible(true)
-	else
-		if as_lib_loaded == false then
-			no_asm_lib_dialog:setVisible(true)
-		end
-	end
-	
 	window.focus(main_window)
 	main_window:focus(editor)
 	
+	if ndless == false then
+		no_ndless_dialog:setVisible(true)
+		window.focus(no_ndless_dialog)
+	else
+		if as_lib_loaded == false then
+			no_asm_lib_dialog:setVisible(true)
+			window.focus(no_asm_lib_dialog)
+		end
+	end
 	
 	window._damage(0,0,320,240)
 	platform.window:invalidate()
@@ -271,10 +272,16 @@ function editor_filter(e,d,a,p,w,l,m,x,y,win)
 	end
 	if e == input.int then
 		editor:event(":",false,false,true,false,1,false,0,0,main_window)
+		file_dirty = true
+		filename_label:setText(file_name.."*",main_window)
+		document.markChanged()
 		return true
 	end
 	if e == input.deriv then
 		editor:event("#",false,false,false,false,1,false,0,0,main_window)
+		file_dirty = true
+		filename_label:setText(file_name.."*",main_window)
+		document.markChanged()
 		return true
 	end
 	if e == "help" then
@@ -289,14 +296,23 @@ function editor_filter(e,d,a,p,w,l,m,x,y,win)
 	end
 	if e == "exp(" then
 		editor:event("{",false,false,false,false,1,false,0,0,main_window)
+		file_dirty = true
+		filename_label:setText(file_name.."*",main_window)
+		document.markChanged()
 		return true
 	end
 	if e == "10^(" then
 		editor:event("}",false,false,false,false,1,false,0,0,main_window)
+		file_dirty = true
+		filename_label:setText(file_name.."*",main_window)
+		document.markChanged()
 		return true
 	end
 	if e == input.mathmin then
 		editor:event(";",false,false,false,false,1,false,0,0,main_window)
+		file_dirty = true
+		filename_label:setText(file_name.."*",main_window)
+		document.markChanged()
 		return true
 	end
 	if e == input.sqrt then
@@ -307,6 +323,7 @@ function editor_filter(e,d,a,p,w,l,m,x,y,win)
 	if l == 1 or e == "cut" or e == "paste" or e == "bsp" or e == "enter" then
 		file_dirty = true
 		filename_label:setText(file_name.."*",main_window)
+		document.markChanged()
 	end
 	return false;
 end
