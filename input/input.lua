@@ -23,6 +23,9 @@
 	"down"
 	"left"
 	"right"
+	"cut" ctrl + x
+	"copy" ctrl + c
+	"paste" ctrl + v
 	
 	And the strings from the special Nspire keys:
 	"^2" (x^2 key)
@@ -82,6 +85,18 @@ function on.charIn(c)
 		end
 	end
 	on.input(c,false,false,false,false,len)
+end
+
+function on.copy()
+	on.input("copy",false,false,false,false,string.len("copy"))
+end
+
+function on.paste()
+	on.input("paste",false,false,false,false,string.len("paste"))
+end
+
+function on.cut()
+	on.input("cut",false,false,false,false,string.len("cut"))
 end
 
 function on.enterKey()

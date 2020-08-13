@@ -13,8 +13,10 @@
 
 window = {}
 window.window = class()
+window.canvas = class()
 window.decoration = class()
 window.button = class()
+window.checkbox = class()
 window.label = class()
 window.textField = class()
 window.textEditor = class()
@@ -30,6 +32,21 @@ window._damaged = {}
 
 function window._setVisible(self,vis)
 	self.visible = vis
+end
+window.canvas.setVisible = window._setVisible
+function window.canvas:init(x,y,w,h,draw,event)
+	self.x = x
+	self.y = y
+	self.width = w
+	self.height = h
+	self.draw = draw
+	self.event = event
+	self.visible = true
+end
+function window.canvas:paint(w,gc)
+	gc:clipRect("set",w.x+self.x,w.y+self.y,self.width,self.height)
+	self.draw(self,w,gc)
+	gc:clipRect("reset")
 end
 function window._recomputeSize(self,gc)
 	self.width = gc:getStringWidth(self.text)
@@ -75,6 +92,46 @@ function window.button:event(e,d,a,p,w,l,m,x,y,win)
 		self.onPress()
 	end
 end
+function window.checkbox:registerFilter(filter)
+	self.filter = filter
+end
+function window.checkbox:init(x,y,w,h,checked)
+	assert(tonumber(x),"window: x has to be a number")
+	assert(tonumber(y),"window: y has to be a number")
+	self.visible = true
+	self.x = x
+	self.y = y
+	self.width = w
+	self.height = h
+	self.checked = false
+end
+window.checkbox.setVisible = window._setVisible
+function window.checkbox:paint(w,gc)
+	gc:setColorRGB(0,0,0)
+	gc:drawRect(w.x+self.x,w.y+self.y,self.width,self.height)
+	if self.checked then
+		gc:drawLine(w.x+self.x,w.y+self.y,w.x+self.x+self.width,w.y+self.y+self.height)
+		gc:drawLine(w.x+self.x+self.width,w.y+self.y,w.x+self.x,w.y+self.y+self.height)
+	end
+end
+function window.checkbox:isChecked()
+	return self.checked
+end
+function window.checkbox:check(check)
+	self.checked = check
+end
+function window.checkbox:event(e,d,a,p,w,l,m,x,y,win)
+	if self.filter ~= nil then
+		if self.filter(e,d,a,p,w,l,m,x,y,win,self) == true then
+			return
+		end
+	end
+	if e == "mouseup" then
+		self.checked = not self.checked
+		window._damage(win.x+self.x,win.y+self.y,self.width,self.height)
+	end
+end
+
 function window.label:init(x,y,text)
 	assert(tonumber(x),"window: x has to be a number")
 	assert(tonumber(y),"window: y has to be a number")
@@ -87,9 +144,14 @@ function window.label:init(x,y,text)
 	if text == nil then
 		self.text = ""
 	else
-		self.text = tostring(x,y,text)
+		self.text = tostring(text)
 	end
 	platform.withGC(window._recomputeSize,self)
+end
+function window.label:setText(text,win)
+	self.text = text
+	platform.withGC(window._recomputeSize,self)
+	window._damage(win.x+self.x,win.y+self.y,self.width,self.height)
 end
 function window.label:paint(w,gc)
 	local ff,ft,fs = gc:setFont(self.ff,self.ftype,self.fsize)
@@ -126,6 +188,10 @@ function window.textField:init(x,y,text,width,height)
 	else
 		self.text = tostring(text)
 	end
+	self.filter = nil
+end
+function window.textField:registerFilter(filter)
+	self.filter = filter
 end
 function window.textField:paint(w,gc)
 	local ff,ft,fs = gc:setFont(self.ff,self.ftype,self.fsize)
@@ -150,6 +216,11 @@ function window.textField._adjustScroll(self,gc)
 	gc:setFont(ff,ft,fs)
 end
 function window.textField:event(e,d,a,p,w,l,m,x,y,win)
+	if self.filter ~= nil then
+		if self.filter(e,d,a,p,w,l,m,x,y,win) == true then
+			return
+		end
+	end
 	if l == 1 then
 		self.text = self.text:sub(1,self.cursor) .. e .. self.text:sub(self.cursor+1)
 		self.cursor = self.cursor + 1
@@ -183,6 +254,9 @@ end
 function window.textField:getText()
 	return self.text
 end
+function window.textField:setText(text)
+	self.text = text
+end
 function window.textField:setFont(ff,ft,size,win)
 	self.ff = ff
 	self.ftype = ft
@@ -205,24 +279,43 @@ function window.textEditor:init(x,y,text,width,height)
 	self.cursor = 0
 	self.scroll = 0
 	self.scrollline = 0
+	self.showlines = false
 	self.line = 1
 	self.text = {}
+	self.selectline = 0
+	self.selectcursor = 0;
+	self.select = false
 	if text == nil then
 		self.text[1] = ""
 	else
 		self.text[1] = tostring(text)
 	end
+	self.filter = nil
+	self.readonly = false
+end
+function window.textEditor:registerFilter(filter)
+	self.filter = filter
+end
+function window.textEditor:showLines(show)
+	self.showlines = show
 end
 function window.textEditor:paint(w,gc)
 	local ff,ft,fs = gc:setFont(self.ff,self.ftype,self.fsize)
 	gc:setColorRGB(0,0,0)
 	gc:drawRect(w.x+self.x,w.y+self.y,self.width,self.height)
 	gc:clipRect("set",w.x+self.x,w.y+self.y,self.width,self.height)
+	local add = 0
+	if self.showlines then
+		add = 50
+	end
 	local h = 0
 	local lineh = -100
 	for i, j in ipairs(self.text) do
 		if i > self.scrollline then
-			gc:drawString(j,w.x+self.x+2+self.scroll,w.y+self.y+h,"top")
+			if self.showlines then
+				gc:drawString(tostring(i),w.x+self.x+2+self.scroll,w.y+self.y+h,"top")
+			end
+			gc:drawString(j,w.x+self.x+2+self.scroll+add,w.y+self.y+h,"top")
 			if i == self.line then
 				lineh = h
 			end
@@ -230,9 +323,12 @@ function window.textEditor:paint(w,gc)
 		end
 	end
 	local scr = gc:getStringWidth(self.text[self.line]:sub(1,self.cursor))
-	gc:fillRect(w.x+self.x+scr+2+self.scroll,w.y+self.y+lineh+2,1,gc:getStringHeight(self.text[self.line])-4)
+	gc:fillRect(w.x+self.x+scr+2+self.scroll+add,w.y+self.y+lineh+2,1,gc:getStringHeight(self.text[self.line])-4)
 	gc:clipRect("reset")
 	gc:setFont(ff,ft,fs)
+end
+function window.textEditor:setReadOnly(read)
+	self.readonly = read
 end
 function window.textEditor._adjustScroll(self,gc)
 	local ff,ft,fs = gc:setFont(self.ff,self.ftype,self.fsize)
@@ -256,14 +352,14 @@ function window.textEditor._adjustScroll(self,gc)
 			h = h + gc:getStringHeight(j)
 		end
 	end
-	if lineh + gc:getStringWidth(self.text[self.line]) > self.height then
+	if lineh + gc:getStringHeight(self.text[self.line]) > self.height then
 		local lines = 0
 		local h = 0
 		for i, j in ipairs(self.text) do
 			if i > self.scrollline then
 				h = h + gc:getStringHeight(j)
 				lines = lines + 1
-				if h >= lineh + gc:getStringWidth(self.text[self.line]) - self.height then
+				if h >= lineh + gc:getStringHeight(self.text[self.line]) - self.height then
 					self.scrollline = self.scrollline + lines
 					gc:setFont(ff,ft,fs)
 					return
@@ -274,12 +370,22 @@ function window.textEditor._adjustScroll(self,gc)
 	gc:setFont(ff,ft,fs)
 end
 function window.textEditor:event(e,d,a,p,w,l,m,x,y,win)
-	if l == 1 then
+	if self.filter ~= nil then
+		if self.filter(e,d,a,p,w,l,m,x,y,win) == true then
+			return
+		end
+	end
+	if l == 1 and not self.readonly then
 		self.text[self.line] = self.text[self.line]:sub(1,self.cursor) .. e .. self.text[self.line]:sub(self.cursor+1)
 		self.cursor = self.cursor + 1
 		window._damage(win.x+self.x,win.y+self.y,self.width,self.height)
 	end
-	if e == "bsp" then
+	if e == "clear" then
+		self.select = true
+		self.selectline = self.line
+		self.selectcursor = cursor
+	end
+	if e == "bsp" and not self.readonly then
 		local c = self.cursor - 1
 		if c < 0 then
 			c = 0
@@ -295,7 +401,7 @@ function window.textEditor:event(e,d,a,p,w,l,m,x,y,win)
 		end
 		window._damage(win.x+self.x,win.y+self.y,self.width,self.height)
 	end
-	if e == "enter" then
+	if e == "enter" and not self.readonly then
 		table.insert(self.text,self.line+1,self.text[self.line]:sub(self.cursor+1))
 		self.text[self.line] = self.text[self.line]:sub(1,self.cursor)
 		self.cursor = 0
@@ -305,12 +411,18 @@ function window.textEditor:event(e,d,a,p,w,l,m,x,y,win)
 	if e == "up" then
 		if self.line > 1 then
 			self.line = self.line - 1
+			if self.text[self.line]:len() < self.cursor then
+				self.cursor = self.text[self.line]:len()
+			end
 			window._damage(win.x+self.x,win.y+self.y,self.width,self.height)
 		end
 	end
 	if e == "down" then
 		if self.line < #self.text then
 			self.line = self.line + 1
+			if self.text[self.line]:len() < self.cursor then
+				self.cursor = self.text[self.line]:len()
+			end
 			window._damage(win.x+self.x,win.y+self.y,self.width,self.height)
 		end
 	end
@@ -343,9 +455,23 @@ end
 function window.textEditor:getText()
 	local t = ""
 	for i, j in ipairs(self.text) do
-		t = t .. j
+		t = t .. j .. "\n"
 	end
+	t = string.sub(t,1,string.len(t)-1) -- cut off the last newline
 	return t
+end
+function window.textEditor:setText(text)
+	self.text = {}
+	for line in text:gmatch("([^\n]*)(\n?)") do
+		table.insert(self.text,line)
+	end
+	self.cursor = 0
+	self.line = 1
+	self.scroll = 0
+	self.scrollline = 0
+	self.selectline = 0
+	self.selectcursor = 0;
+	self.select = false
 end
 function window.textEditor:getLine(l)
 	return self.text[l]
@@ -392,7 +518,9 @@ function window.window:init(x,y,width,height,visible,name,decoration)
 	local d = w.decoration
 	window._damage(w.x-d.left,w.y-d.top,w.width+d.left+d.right,w.height+d.top+d.bottom)
 end
-
+function window.window:registerFilter(filter)
+	self.filter = filter
+end
 function window.window:add(c)
 	table.insert(self.components,c)
 	window._damage(self.x+c.x,self.y+c.y,c.width,c.height)
@@ -493,6 +621,11 @@ function window.window:focus(c)
 end
 
 function window.window:event(e,d,a,p,w,l,m,x,y)
+	if self.filter ~= nil then
+		if self.filter(e,d,a,p,w,l,m,x,y,self) == true then
+			return
+		end
+	end
 	if m == true then
 		for i,j in ipairs(self.components) do
 			if x >= self.x+j.x and x <= self.x+j.x+j.width and y >= self.y+j.y and y <= self.y+j.y+j.height then
@@ -695,21 +828,25 @@ function on.paint(gc)
 		local w = j.w
 		local h = j.h
 		for k, l in ipairs(window._windows) do
-			local d = l.decoration
-			if (not (x >= l.x + l.width + d.right or l.x - d.left >= x + w)) and (not (y >= l.y + l.height + d.bottom or l.y - d.top >= y + h)) then
-				if not l.fullscreen == true then
-					l.decoration:paint(gc,l)
+			if l.visible ~= false then
+				local d = l.decoration
+				if (not (x >= l.x + l.width + d.right or l.x - d.left >= x + w)) and (not (y >= l.y + l.height + d.bottom or l.y - d.top >= y + h)) then
+					if not l.fullscreen == true then
+						l.decoration:paint(gc,l)
+					end
+					l:paint(gc)
 				end
-				l:paint(gc)
 			end
 		end
 	end
 	if #window._damaged == 0 then
 		for i,w in ipairs(window._windows) do
-			if not w.fullscreen == true then
-				w.decoration:paint(gc,w)
+			if w.visible ~= false then
+				if not w.fullscreen == true then
+					w.decoration:paint(gc,w)
+				end
+				w:paint(gc)
 			end
-			w:paint(gc)
 		end
 	end
 	window._damaged = {}
