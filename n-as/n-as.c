@@ -100,6 +100,7 @@ int lua_runString(lua_State *L)
 		}
 		if (block != NULL)
 		{
+			clear_cache(); // ICache needs to be cleared
 			disableIRQ();
 			//printf("start: 0x%x, block: %p\n",block+entry_offset,block);
 			register uint32_t start_adr asm("r0") = (uint32_t) (block+entry_offset);
