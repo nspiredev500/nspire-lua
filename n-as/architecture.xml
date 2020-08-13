@@ -3,6 +3,7 @@ Page 3 is a instruction searcher. You can enter a instruction, and get a descrip
 Page 4 is a simple instruction list.
 If you already know a bit about programming and the arm architecture, you can skip this and look at the included examples.
 
+IMPORTANT: The return address to the assembler is placed in the lr at the beginning of the program. Use any means to return to that address you like, but otherwise your calculator crashes.
 
 The TI-Nspire uses an ARM processor.
 Arm processors cannot directly access memory.
