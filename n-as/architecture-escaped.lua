@@ -1,0 +1,14 @@
+&lt;r2dtotree&gt;
+	&lt;node name="1doc"&gt;
+		&lt;node name="1para"&gt;
+			&lt;node name="1rtline"&gt;
+				&lt;leaf name="1keyword"&gt;Architecture&lt;/leaf&gt;
+			&lt;/node&gt;
+		&lt;/node&gt;
+		&lt;node name="1para"&gt;
+			&lt;node name="1rtline"&gt;
+				&lt;leaf name="1word"&gt;L1&lt;/leaf&gt;
+			&lt;/node&gt;
+		&lt;/node&gt;
+	&lt;/node&gt;
+&lt;/r2dtotree&gt;

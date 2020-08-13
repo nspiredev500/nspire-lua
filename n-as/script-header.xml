@@ -1,0 +1,14 @@
+<wdgt
+    xmlns:sc="urn:TI.ScriptApp" type="TI.ScriptApp" ver="1.0">
+    <sc:mFlags>1024</sc:mFlags>
+    <sc:value>8</sc:value>
+    <sc:cry>0</sc:cry>
+    <sc:legal>none</sc:legal>
+    <sc:schk>false</sc:schk>
+    <sc:md>
+        <sc:mde name="_VER" prop="134217728">1:1</sc:mde>
+        <sc:mde name="TITLE" prop="2147549184">n-as</sc:mde>
+        <sc:mde name="TARAL" prop="134217728">2:5</sc:mde>
+    </sc:md>
+
+    <sc:script version="33882629" id="1">

@@ -1,0 +1,91 @@
+If you already know a bit about programming and the arm architecture, you can skip this and look at the included examples.
+In the assembler (page 2) you can write your programs. Use menu to save and load programs, help for the options, ctrl+^ for seeing the registers after a program executed, ctrl+x^2 to see the stack, esc to quit out of windows.
+Page 3 is a instruction searcher. You can enter a instruction, and get a description. Press enter do search a description and press help to get back to entering an instruction.
+
+The TI-Nspire uses an ARM processor.
+Arm processors cannot directly access memory.
+They instead operate on registers.
+On this processor, the registers are 4 bytes wide, 32 bits, and there are 16 registers, r0 to r15.
+The first 15 are for storing data, but the last one is special: It holds the address where the processor currently executes (+8 in arm mode,+4 in thumb mode).
+That's why it's called the program counter, in assembly you just call it pc.
+r14 is also special, it's called the link register (lr). When jumping to a function, you can tell the processor to put the address of the next instruction into the lr.
+When the function wants to return, it can jump to the value stored in lr.
+r12 is the stack pointer (sp). You can use the stack to save temporary data in a function if you run out of registers, and to store the lr before you jump to a function.
+That way, you can get the lr off the stack and can return.
+The easiest way to use the stack is via the push and pop instructions.
+'push {r1,r4-r8}' stores the registers 1 and 4 to 8 on the stack.
+you can recover the values using 'pop {r1,r4-r8}'.
+IMPORTANT: You cannot use sp in a push or pop instruction.
+
+Many fundamental math operations are available directly on the processor, but it lacks division and floating point numbers.
+Memory can be accessed by special instructions, which use one register as the address to load or store another register.
+The actual instructions are encoded in binary, but there are assemblers (like this one) that recognize mnemonics and translate them into binary instructions for you.
+Assemblers also have other useful features, like calculating the offset to functions or data.
+At the start of a line, you can write a string (no numbers for now, sorry) and a ':' to use the string as a label.
+If you use the string in a right instruction, it uses the label.
+'b start' would jump to a label called 'start'.
+Assembler directives start with a '.'.
+The most important directives are '.text', '.data' (or '.section text', '.section data').
+The program is divided into sections. Before you can write anything, you must specify where to put it.
+Code should go in the text section. Data in the data section.
+In this assembler, there is also '.entry'. You have to use it somewhere to specify at which label execution should start.
+'.entry start' makes the program start executing at the label 'start'.
+'.word number' puts a number into the next 4 bytes.
+You can use 'dat: .word 1' to store a 1 in the program and reference it using the label 'dat'.
+
+Mnemonics for instructions are usually 3 characters long.
+For arm assembly, you first specify the destination register and then source register(s).
+'add r0, r2, r3' would add r2 and r3 and put the result in r0.
+The second source can also be a number:
+'add r0, r2, #10' would add 10 to r2 and put the result into r0.
+You can also shift the second register:
+'mov r0, r1 lsl #2' would shift r1 left by 2 bits and put it into r0.
+You can also shift the second register by yet another register:
+'mov r0, r1 lsl r2' would shift r1 left by r2 bits and put it into r0.
+The shifts are:
+lsl (logical shift left)
+lsr (logical shift right)
+asr (arithmetic shift right)
+ror (rotate right)
+
+Usually, the destination register is called rd in instruction descriptions, and the sources rn and rm.
+There is also a register you can't access normally, the cpsr (current program status register).
+It stores flag bits specific instructions can set, most importantly cmp (compare).
+After every instruction you can specify a condition. The instruction only gets executed if the condition is met.
+The conditions are:
+eq (equals)
+ne (not equals)
+lt (less than)
+gt (greater than)
+le (less than or equal)
+ge (greater than or equal)
+cs (carry set)
+cc (carry clear)
+hi (unsigned higher)
+ls (unsigned lower or equal)
+pl (plus/positive)
+mi (minus/negative)
+vs (overflow)
+vc (no overflow)
+hs (unsigned greater than or equal)
+lo (unsigned less than)
+
+Example:
+cmp r0, #10
+addeq r1, r1, #1
+This would add 1 to r1 if r0 is equal to 10.
+
+The most useful instructions are:
+add rd, rn, rm
+sub rd, rn, rm  subtract
+rsub rd, rd, #0  reverse subtract (rsub) from 0, effectively negates a number
+mul rd, rn, rm  multiply
+ldr rd, [rn]  use rn as an address, load the value and put it into rd
+str rd, [rn]  use rn as an address and put the value of rd into it
+cmp rn, #number  compare rn to a number and set the condition flags
+mov rd, rn  copy/move the value of rn into rd
+bx lr  return from a function using lr
+b label  jumps to the label 'label'
+bl label jumps to the label 'label' and puts the address of the next instruction into lr
+push {register list}  pushes the value of the registers in the list to the stack
+pop {register list}  pops the values of the registers in the list from the stack
