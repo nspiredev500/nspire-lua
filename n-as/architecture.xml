@@ -1,4 +1,4 @@
-In the assembler (page 2) you can write your programs. Use menu to save and load programs, help for the options, ctrl+^ for seeing the registers after a program executed, ctrl+x^2 to see the stack, esc to quit out of windows.
+In the assembler (page 2) you can write your programs. Use menu to save and load programs, help for the options, ctrl+menu to run, ctrl+^ for seeing the registers after a program executed, ctrl+x^2 to see the stack, esc to quit out of windows.
 Page 3 is a instruction searcher. You can enter a instruction, and get a description. Press enter do search a description and press help to get back to entering an instruction.
 Page 4 is a simple instruction list.
 If you already know a bit about programming and the arm architecture, you can skip this and look at the included examples.
@@ -34,6 +34,9 @@ In this assembler, there is also '.entry'. You have to use it somewhere to speci
 '.entry start' makes the program start executing at the label 'start'.
 '.word number' puts a number into the next 4 bytes.
 You can use 'dat: .word 1' to store a 1 in the program and reference it using the label 'dat'.
+'.align number' fills with zeros until the address is a multiple of 'number'.
+'.zero number' writes 'number' zero bytes.
+'.asciz' writes a zero-terminated ascii string.
 
 Mnemonics for instructions are usually 3 characters long.
 For arm assembly, you first specify the destination register and then source register(s).

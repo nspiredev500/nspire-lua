@@ -250,6 +250,9 @@ function window.button:event(e,d,a,p,w,l,m,x,y,win)
 		self.onPress()
 	end
 end
+function window.checkbox:registerFilter(filter)
+	self.filter = filter
+end
 function window.checkbox:init(x,y,w,h,checked)
 	assert(tonumber(x),&quot;&quot;window: x has to be a number&quot;&quot;)
 	assert(tonumber(y),&quot;&quot;window: y has to be a number&quot;&quot;)
@@ -276,6 +279,11 @@ function window.checkbox:check(check)
 	self.checked = check
 end
 function window.checkbox:event(e,d,a,p,w,l,m,x,y,win)
+	if self.filter ~= nil then
+		if self.filter(e,d,a,p,w,l,m,x,y,win,self) == true then
+			return
+		end
+	end
 	if e == &quot;&quot;mouseup&quot;&quot; then
 		self.checked = not self.checked
 		window._damage(win.x+self.x,win.y+self.y,self.width,self.height)

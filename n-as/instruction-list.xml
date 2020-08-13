@@ -14,7 +14,6 @@ cdp
 clz
 cmn
 cmp
-cps
 cpy
 eor
 ldc
@@ -27,7 +26,6 @@ ldrsb
 ldrsh
 ldrt
 mcr
-mla
 mov
 mrc
 mrs

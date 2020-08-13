@@ -30,7 +30,7 @@ stack_dialog = nil
 
 
 
-checkbox_bin = nil
+
 checkbox_hex = nil
 checkbox_dec = nil
 
@@ -49,7 +49,12 @@ fileopen_canvas = nil
 
 
 
-files = {}
+
+files = {
+{"Hello World", ".entry start\n.text\nstart: mov r0, #1\nbx lr"},
+{"Hello Stack", ".entry start\n.text\nstart: mov r0, #1\npush {r0}\nbx lr"},
+{"Fibonacci", ";switch to decimal in the options\n;run and check the stack\n.entry start\n.text\n;r0 and r1 are the last 2 fibonaccis\n;r3 is the loop counter\nstart: mov r0, #0\nmov r1, #1\nmov r3, #0\npush {r0}\npush {r1}\nloop: add r2, r1, r0\npush {r2}\nmov r0, r1\n mov r1, r2\nadd r3, r3, #1\n cmp r3, #15\nblt loop\nbx lr"}
+}
 
 
 registers_field = nil
@@ -95,12 +100,14 @@ function on.construction()
 	editor = window.textEditor(0,20,"",317,211-20)
 	editor:showLines(true)
 	editor:registerFilter(editor_filter)
+	editor:setText(files[1][2])
 	main_window:add(editor)
 	
 	asm_error_label = window.textEditor(0,0,"",300,50)
 	asm_error_label:setReadOnly(true)
 	filename_label = window.label(1,1,"")
-	
+	filename_label:setText(files[1][1],main_window)
+	file_name = files[1][1]
 	
 	filename_textbox = window.textField(10,10,"",290,20)
 	
@@ -149,6 +156,13 @@ function on.construction()
 	checkbox_coproc = window.checkbox(110,130,10,10)
 	checkbox_psr = window.checkbox(210,130,10,10)
 	
+	checkbox_hex = window.checkbox(10,30,10,10)
+	checkbox_hex:check(true)
+	checkbox_dec = window.checkbox(10,50,10,10)
+	
+	checkbox_hex:registerFilter(checkbox_filter)
+	checkbox_dec:registerFilter(checkbox_filter)
+	
 	
 	options_window:add(window.label(5,70,"These are instructions for advanced users."))
 	options_window:add(window.label(5,90,"For safety, these options are initially disabled."))
@@ -160,6 +174,12 @@ function on.construction()
 	options_window:add(checkbox_swi)
 	options_window:add(checkbox_coproc)
 	options_window:add(checkbox_psr)
+	
+	options_window:add(window.label(30,25,"Hex"))
+	options_window:add(window.label(30,45,"Decimal"))
+	
+	options_window:add(checkbox_hex)
+	options_window:add(checkbox_dec)
 	
 	options_window:registerFilter(dialog_filter)
 	
@@ -179,12 +199,25 @@ function on.construction()
 	main_window:focus(editor)
 	
 	
-	
+	window._damage(0,0,320,240)
 	platform.window:invalidate()
 end
 
 function on.getSymbolList()
 	return {"libs"}
+end
+
+function checkbox_filter(e,d,a,p,w,l,m,x,y,win,self)
+	if e == "mouseup" then
+		if self == checkbox_hex then
+			checkbox_dec:check(false)
+		end
+		if self == checkbox_dec then
+			checkbox_hex:check(false)
+		end
+		window._damage(0,0,320,240)
+	end
+	return false
 end
 
 function dialog_filter(e,d,a,p,w,l,m,x,y,win)
@@ -206,15 +239,30 @@ function editor_filter(e,d,a,p,w,l,m,x,y,win)
 			else
 				local regs_string = ""
 				local regs = asm.getRegs()
-				regs_string = regs_string..string.format("r%d=0x%x\n",0,regs[0])
+				if checkbox_dec:isChecked() then
+					regs_string = regs_string..string.format("r%d=%d\n",0,regs[0])
+				end
+				if checkbox_hex:isChecked() then
+					regs_string = regs_string..string.format("r%d=0x%x\n",0,regs[0])
+				end
 				for i,j in ipairs(regs) do
-					regs_string = regs_string..string.format("r%d=0x%x\n",i,j)
+					if checkbox_dec:isChecked() then
+						regs_string = regs_string..string.format("r%d=%d\n",i,j)
+					end
+					if checkbox_hex:isChecked() then
+						regs_string = regs_string..string.format("r%d=0x%x\n",i,j)
+					end
 				end
 				registers_field:setText(regs_string,registers_dialog)
 				local stack_string = ""
 				local stack = asm.getStack()
 				for i,j in ipairs(stack) do
-					stack_string = stack_string..string.format("%d: 0x%x\n",i,j)
+					if checkbox_dec:isChecked() then
+						stack_string = stack_string..string.format("%d: %d\n",i,j)
+					end
+					if checkbox_hex:isChecked() then
+						stack_string = stack_string..string.format("%d: 0x%x\n",i,j)
+					end
 				end
 				stack_field:setText(stack_string,stack_dialog)
 			end
@@ -223,10 +271,16 @@ function editor_filter(e,d,a,p,w,l,m,x,y,win)
 	end
 	if e == input.int then
 		editor:event(":",false,false,true,false,1,false,0,0,main_window)
+		file_dirty = true
+		filename_label:setText(file_name.."*",main_window)
+		document.markChanged()
 		return true
 	end
 	if e == input.deriv then
 		editor:event("#",false,false,false,false,1,false,0,0,main_window)
+		file_dirty = true
+		filename_label:setText(file_name.."*",main_window)
+		document.markChanged()
 		return true
 	end
 	if e == "help" then
@@ -241,14 +295,23 @@ function editor_filter(e,d,a,p,w,l,m,x,y,win)
 	end
 	if e == "exp(" then
 		editor:event("{",false,false,false,false,1,false,0,0,main_window)
+		file_dirty = true
+		filename_label:setText(file_name.."*",main_window)
+		document.markChanged()
 		return true
 	end
 	if e == "10^(" then
 		editor:event("}",false,false,false,false,1,false,0,0,main_window)
+		file_dirty = true
+		filename_label:setText(file_name.."*",main_window)
+		document.markChanged()
 		return true
 	end
 	if e == input.mathmin then
 		editor:event(";",false,false,false,false,1,false,0,0,main_window)
+		file_dirty = true
+		filename_label:setText(file_name.."*",main_window)
+		document.markChanged()
 		return true
 	end
 	if e == input.sqrt then
@@ -259,6 +322,7 @@ function editor_filter(e,d,a,p,w,l,m,x,y,win)
 	if l == 1 or e == "cut" or e == "paste" or e == "bsp" or e == "enter" then
 		file_dirty = true
 		filename_label:setText(file_name.."*",main_window)
+		document.markChanged()
 	end
 	return false;
 end
@@ -284,7 +348,7 @@ function filename_filter(e,d,a,p,w,l,m,x,y,win)
 end
 
 function on.save()
-	return {file_name,file_dirty,checkbox_swi:isChecked(),checkbox_coproc:isChecked(),checkbox_psr:isChecked(),files,editor:getText()};
+	return {file_name,file_dirty,checkbox_swi:isChecked(),checkbox_coproc:isChecked(),checkbox_psr:isChecked(),files,editor:getText(),checkbox_hex:isChecked(),checkbox_dec:isChecked()};
 end
 
 function on.restore(s)
@@ -300,6 +364,8 @@ function on.restore(s)
 	checkbox_psr:check(s[5])
 	files = s[6]
 	editor:setText(s[7])
+	checkbox_hex:check(s[8])
+	checkbox_dec:check(s[9])
 	window._damage(0,0,320,240)
 end
 
